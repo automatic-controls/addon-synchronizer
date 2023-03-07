@@ -1,0 +1,256 @@
+<!--
+  BSD 3-Clause License
+  Copyright (c) 2022, Automatic Controls Equipment Systems, Inc.
+  Contributors: Cameron Vogt (@cvogt729)
+-->
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>
+      Synchronizer
+    </title>
+    <link rel="stylesheet" type="text/css" href="../../../../../../root/webapp/css/main.css"/>
+    <script>
+      function validateNumber(obj){
+        let str = obj.value;
+        if (str.length>0){
+          let c = str.charAt(0);
+          if (c==='-'){
+            str = str.substring(1);
+          }else{
+            c = '';
+          }
+          str = str.replace(/\D/g,"");
+          if (str.length>9){
+            str = str.substring(0,9);
+          }
+          obj.value = c+str;
+        }
+      }
+      function validateLong(obj){
+        let str = obj.value;
+        if (str.length>0){
+          str = str.replace(/\D/g,"");
+          if (str.length>18){
+            str = str.substring(0,18);
+          }
+          obj.value = str;
+        }
+      }
+      function validatePositiveInt(obj){
+        let str = obj.value;
+        if (str.length>0){
+          str = str.replace(/\D/g,"");
+          if (str.length>9){
+            str = str.substring(0,9);
+          }
+          obj.value = str;
+        }
+      }
+      function validatePort(obj){
+        let str = obj.value;
+        if (str.length>0){
+          str = str.replace(/\D/g, "");
+          if (str.length>0){
+            let num = Number(str);
+            if (num>65535){
+              num = 65535;
+            }
+            str = String(num).replace(/\D/g, "");
+          }
+          obj.value = str;
+        }
+      }
+      function resetConfig(){
+        configResetButton.disabled = true;
+        configSaveButton.disabled = true;
+        host.value = currentHost;
+        port.value = currentPort;
+        connectionKey.value = "";
+        timeout.value = currentTimeout;
+        deleteLog.value = currentDeleteLog;
+        configStatus.innerText = "";
+        syncSchedule.value = currentSyncSchedule;
+      }
+      function updateConfigResets(){
+        configResetButton.disabled = true;
+        configSaveButton.disabled = true;
+        currentHost = host.value;
+        currentPort = port.value;
+        currentTimeout = timeout.value;
+        currentDeleteLog = deleteLog.value;
+        currentSyncSchedule = syncSchedule.value;
+        connectionKey.value = "";
+        configStatus.innerText = 'Saved successfully!';
+      }
+      function onConfigChange(){
+        configResetButton.disabled = false;
+        configSaveButton.disabled = false;
+        configStatus.innerText = 'Changes unsaved.';
+      }
+      function saveConfig(){
+        configResetButton.disabled = true;
+        configSaveButton.disabled = true;
+        validatePort(port);
+        validateLong(timeout);
+        validateLong(deleteLog);
+        if (host.value.length===0){
+          configStatus.innerText = 'Please specify the host.';
+        }else if (port.value.length===0){
+          configStatus.innerText = 'Please specify the port.'
+        }else if (timeout.value.length===0){
+          configStatus.innerText = 'Please specify the timeout.';
+        }else if (deleteLog.value.length===0){
+          configStatus.innerText = 'Please specify when to delete log entries.';
+        }else{
+          configStatus.innerText = "Submitting...";
+          let req = new XMLHttpRequest();
+          req.open("POST","__PREFIX__index",true);
+          req.setRequestHeader("content-type", "application/x-www-form-urlencoded");
+          req.onreadystatechange = function(){
+            if (this.readyState==4){
+              if (this.status==200){
+                updateConfigResets();
+                nextSyncLatent.innerText = this.responseText;
+              }else{
+                configResetButton.disabled = false;
+                configSaveButton.disabled = false;
+                if (this.status==403){
+                  configStatus.innerText = "Insufficient permissions.";
+                }else if (this.status==504){
+                  configStatus.innerText = "Request timed out.";
+                }else{
+                  configStatus.innerText = "Error code: "+this.status;
+                }
+              }
+            }
+          }
+          req.send(
+            "config"+
+            "&host="+encodeURIComponent(host.value)+
+            "&port="+encodeURIComponent(port.value)+
+            "&timeout="+encodeURIComponent(timeout.value)+
+            "&deleteLog="+encodeURIComponent(deleteLog.value)+
+            "&connectionKey="+encodeURIComponent(connectionKey.value)+
+            "&syncSchedule="+encodeURIComponent(syncSchedule.value)
+          );
+          return;
+        }
+        configResetButton.disabled = false;
+        configSaveButton.disabled = false;
+      }
+      function updateStatus(){
+        let req = new XMLHttpRequest();
+        req.open("GET", "__PREFIX__index?status", true);
+        req.setRequestHeader("content-type", "application/x-www-form-urlencoded");
+        req.onreadystatechange = function(){
+          if (this.readyState==4){
+            if (this.status==200){
+              let i = this.responseText.indexOf(';');
+              let j = this.responseText.indexOf(';',i+1)
+              let k = this.responseText.indexOf(';',j+1);
+              keyHash.innerText = this.responseText.substring(0,i);
+              nextSyncLatent.innerText = this.responseText.substring(i+1,j);
+              nextSyncActual.innerText = this.responseText.substring(j+1,k)
+              statusText.innerText = this.responseText.substring(k+1);
+            }else{
+              statusText.innerText = "Error code: "+this.status;
+              keyHash.innerTEXT = "NULL";
+              nextSyncActual.innerText = "NULL";
+            }
+            setTimeout(updateStatus,5000);
+          }
+        }
+        req.send();
+      }
+      function sendCommand(obj, status, cmd, msg){
+        obj.disabled = true;
+        status.innerText = "Submitting...";
+        let req = new XMLHttpRequest();
+        req.open("GET", "__PREFIX__index?"+cmd, true);
+        req.setRequestHeader("content-type", "application/x-www-form-urlencoded");
+        req.onreadystatechange = function(){
+          if (this.readyState==4){
+            if (this.status==200){
+              status.innerText = msg;
+            }else if (this.status==403){
+              status.innerText = "Insufficient permissions.";
+            }else if (this.status==504){
+              status.innerText = "Request timed out.";
+            }else{
+              status.innerText = "Error code: "+this.status;
+            }
+            obj.disabled = false;
+          }
+        }
+        req.send();
+      }
+      function enableRemoval(obj){
+        sendCommand(obj, configStatus, "enableRemoval", "Add-on removal enabled.");
+      }
+      function disableRemoval(obj){
+        sendCommand(obj, configStatus, "disableRemoval", "Add-on removal disabled.");
+      }
+      function clearKey(obj){
+        sendCommand(obj, configStatus, "resetKey", "Public-key cleared.");
+      }
+    </script>
+  </head>
+  <body>
+    <div style="text-align:center">
+      <h1>Addon Synchronizer __VERSION__</h1>
+      <h3 class="e">Database Key Hash: <span id="keyHash">Retrieving...</span></h3>
+      <h3 id="statusText" class="e" style="color:red">Retrieving...</h3>
+      <br>
+      <label for="host">Host:</label>
+      <input id="host" class="e" type="text" autocomplete="off" oninput="onConfigChange()">
+      <br>
+      <label for="port">Port:</label>
+      <input id="port" class="e" type="text" autocomplete="off" oninput="validatePort(this);onConfigChange()"><span>1 - 65535</span>
+      <br>
+      <label for="connectionKey">Connection Key:</label>
+      <input id="connectionKey" class="e" type="text" autocomplete="off" oninput="onConfigChange()">
+      <br>
+      <label for="timeout"><span title="Milliseconds to wait for a response before terminating the connection.">Timeout:</span></label>
+      <input id="timeout" class="e" type="text" autocomplete="off" oninput="validateLong(this);onConfigChange()"><span>milliseconds</span>
+      <br>
+      <label for="deleteLog"><span title="Specifies the number of milliseconds to wait before deleting log entries.">Log Expiry:</span></label>
+      <input id="deleteLog" class="e" type="text" autocomplete="off" oninput="validateLong(this);onConfigChange()"><span>milliseconds</span>
+      <br>
+      <label for="syncSchedule"><span title="Specifies a Cron expression that determines when to query the database for add-on synchronization. If no expression is given, the database will be queried daily.">Sync Schedule:</span></label>
+      <input id="syncSchedule" class="e" type="text" autocomplete="off" oninput="onConfigChange()">
+      <br><br>
+      <label for="nextSyncLatent"><span title="Updated immediately when the sync schedule changes.">Latent Next Sync Time:</span></label>
+      <span class="e" id="nextSyncLatent"></span>
+      <br>
+      <label for="nextSyncActual"><span title="Displays the literal time when the next synchronization event will occur.">Actual Next Sync Time:</span></label>
+      <span class="e" id="nextSyncActual"></span>
+      <br>
+      <h3 id="configStatus" class="e" style="color:red"></h3>
+      <br>
+      <button id="configResetButton" class="e" onclick="resetConfig()">Reset</button>
+      <button id="configSaveButton" class="e" onclick="saveConfig()">Save</button>
+      <button class="e" onclick="clearKey(this)">Clear Public-Key</button>
+      <!--
+        <br><br>
+        <button class="e" onclick="enableRemoval(this)">Enable Add-On Removal</button>
+        <button class="e" onclick="disableRemoval(this)">Disable Add-On Removal</button>
+      -->
+      <br><br>
+      <a target="_blank" href="https://github.com/automatic-controls/addon-synchronizer/blob/main/README.md">Documentation</a><br>
+      <a target="_blank" href="https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/scheduling/support/CronExpression.html#parse(java.lang.String)">Cron Expressions</a><br>
+      <a href="__PREFIX__index?downloadLog" target="_blank" download="log.txt">Download Log</a>
+    </div>
+    <script>
+      var currentHost = "__HOST__";
+      var currentPort = "__PORT__";
+      var currentTimeout = "__TIMEOUT__";
+      var currentDeleteLog = "__DELETE_LOG__";
+      var currentSyncSchedule = "__SYNC_SCHEDULE__";
+      nextSyncLatent.innerText = "__NEXT_SYNC_LATENT__";
+      nextSyncActual.innerText = "__NEXT_SYNC_ACTUAL__";
+      resetConfig();
+      updateStatus();
+    </script>
+  </body>
+</html>
