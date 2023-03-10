@@ -55,10 +55,6 @@ public class MainPage extends SecureServlet {
       res.setContentType("application/octet-stream");
       res.setHeader("Content-Disposition","attachment;filename=\"log.txt\"");
       Logger.transferTo(out);
-    }else if (req.getParameter("enableRemoval")!=null){
-      //Initializer.enableAddonRemoval(0);
-    }else if (req.getParameter("disableRemoval")!=null){
-      //Initializer.disableAddonRemoval(0);
     }else if (req.getParameter("resetKey")!=null){
       ClientConfig.databaseKey = null;
     }else if (req.getParameter("config")!=null){

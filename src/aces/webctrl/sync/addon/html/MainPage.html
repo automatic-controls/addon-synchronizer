@@ -185,12 +185,6 @@
         }
         req.send();
       }
-      function enableRemoval(obj){
-        sendCommand(obj, configStatus, "enableRemoval", "Add-on removal enabled.");
-      }
-      function disableRemoval(obj){
-        sendCommand(obj, configStatus, "disableRemoval", "Add-on removal disabled.");
-      }
       function clearKey(obj){
         sendCommand(obj, configStatus, "resetKey", "Public-key cleared.");
       }
@@ -231,11 +225,6 @@
       <button id="configResetButton" class="e" onclick="resetConfig()">Reset</button>
       <button id="configSaveButton" class="e" onclick="saveConfig()">Save</button>
       <button class="e" onclick="clearKey(this)">Clear Public-Key</button>
-      <!--
-        <br><br>
-        <button class="e" onclick="enableRemoval(this)">Enable Add-On Removal</button>
-        <button class="e" onclick="disableRemoval(this)">Disable Add-On Removal</button>
-      -->
       <br><br>
       <a target="_blank" href="https://github.com/automatic-controls/addon-synchronizer/blob/main/README.md">Documentation</a><br>
       <a target="_blank" href="https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/scheduling/support/CronExpression.html#parse(java.lang.String)">Cron Expressions</a><br>

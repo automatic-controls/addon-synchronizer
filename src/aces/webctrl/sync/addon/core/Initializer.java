@@ -5,7 +5,6 @@
 */
 package aces.webctrl.sync.addon.core;
 import java.io.*;
-import java.nio.*;
 import java.nio.file.*;
 import java.nio.channels.*;
 import java.util.function.*;
@@ -40,8 +39,6 @@ public class Initializer implements ServletContextListener {
   private volatile static AsynchronousChannelGroup grp = null;
   /** Whether or not there is a connection to the central database */
   private volatile static boolean connected = false;
-  /** Path to JSP file which is edited to prevent addon removal (e.g, {@code C:\WebCTRL8.0\webroot\_common\lvl5\config\webapps_lite.jsp}). */
-  private volatile static Path webapps_lite = null;
   /** Path to the WebCTRL installation directory (e.g, {@code C:\WebCTRL8.0}). */
   public volatile static Path rootWebCTRL = null;
   /** Path to the active WebCTRL system folder (e.g, {@code C:\WebCTRL8.0\webroot\test_system}). */
@@ -97,7 +94,6 @@ public class Initializer implements ServletContextListener {
         }
         addonsFolder = addonsFolder.normalize();
       }
-      webapps_lite = rootWebCTRL.resolve("webroot").resolve("_common").resolve("lvl5").resolve("config").resolve("webapps_lite.jsp").normalize();
     }catch(Throwable e){
       Logger.log(e);
     }
@@ -112,7 +108,6 @@ public class Initializer implements ServletContextListener {
     Logger.trim(ClientConfig.deleteLogAfter);
     mainThread = new Thread(){
       public void run(){
-        //disableAddonRemoval(0);
         enqueueConnect(0);
         DelayedRunnable r = null;
         while (!stop){
@@ -205,64 +200,6 @@ public class Initializer implements ServletContextListener {
   /** Enqueues a task on the primary processing queue */
   public static void enqueue(DelayedRunnable r){
     queue.offer(r);
-  }
-  /**
-   * Enqueues a task which edits system files to disable removal of this addon.
-   */
-  public static void disableAddonRemoval(long expiry){
-    enqueue(new DelayedRunnable(expiry){
-      public void run(){
-        try{
-          if (Files.exists(webapps_lite)){
-            ByteBuffer buf = ByteBuffer.wrap(new String(Files.readAllBytes(webapps_lite), java.nio.charset.StandardCharsets.UTF_8).replaceAll(
-              "(?<!function )executeWebappCommand\\(\\s*+(?!'start')[^,]++,\\s*+(\\w++)\\s*+\\);?+(?!/\\*EDITED\\*/)",
-              "if ($1!=\""+name+"\"){ $0/*EDITED*/ }"
-            ).getBytes(java.nio.charset.StandardCharsets.UTF_8));
-            try(
-              FileChannel ch = FileChannel.open(webapps_lite, StandardOpenOption.WRITE, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
-              FileLock lock = ch.tryLock();
-            ){
-              while (buf.hasRemaining()){
-                ch.write(buf);
-              }
-            }
-          }else{
-            Logger.log("Could not disable addon removal because webapps_lite cannot be found.");
-          }
-        }catch(Throwable e){
-          Logger.log("Error occurred while disabling addon removal.", e);
-        }
-      }
-    });
-  }
-  /**
-   * Enqueues a task which edits system files to enable removal of this addon.
-   */
-  public static void enableAddonRemoval(long expiry){
-    enqueue(new DelayedRunnable(expiry){
-      public void run(){
-        try{
-          if (Files.exists(webapps_lite)){
-            ByteBuffer buf = ByteBuffer.wrap(new String(Files.readAllBytes(webapps_lite), java.nio.charset.StandardCharsets.UTF_8).replaceAll(
-              "if \\(\\w++!=\""+name+"\"\\)\\{ (.+?)/\\*EDITED\\*/ \\}",
-              "$1"
-            ).getBytes(java.nio.charset.StandardCharsets.UTF_8));
-            try(
-              FileChannel ch = FileChannel.open(webapps_lite, StandardOpenOption.WRITE, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
-              FileLock lock = ch.tryLock();
-            ){
-              while (buf.hasRemaining()){
-                ch.write(buf);
-              }
-            }
-          }else{
-            Logger.log("Could not enable addon removal because webapps_lite cannot be found.");
-          }
-        }catch(Throwable e){
-          Logger.log("Error occurred while enabling addon removal.", e);
-        }
-      }
-    });
   }
   /** Enqueues a task which attempts to connect to the database */
   private static void enqueueConnect(long expiry){

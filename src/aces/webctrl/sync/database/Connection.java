@@ -112,10 +112,12 @@ public class Connection implements Comparable<Connection> {
                                   //Synchronize addons
                                   wrap.writePath(Main.getSyncs(), null, new Handler<Boolean>(){
                                     public void func(Boolean b){
-                                      if (b){
-                                        Logger.logAsync(wrap.getIP()+": Sync successful.");
-                                      }
+                                      Logger.logAsync(wrap.getIP()+(b?": Sync successful.":": Sync failed."));
                                       close(true);
+                                    }
+                                    @Override public void failed(Throwable e, Void v){
+                                      Logger.logAsync(wrap.getIP()+": Sync failed.", e);
+                                      super.failed(e,v);
                                     }
                                   }, null, null);
                                 }else{

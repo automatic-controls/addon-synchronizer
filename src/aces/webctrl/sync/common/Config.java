@@ -16,7 +16,7 @@ public class Config {
    * Hardcoded internal version string for the application.
    * Used to determine compatibility when connecting remote hosts.
    */
-  public final static String VERSION = "0.1.0";
+  public final static String VERSION = "0.1.1";
   /**
    * Used for evaluating compatible version strings.
    */
@@ -192,22 +192,23 @@ public class Config {
    */
   public static boolean save(){
     try{
+      final String sep = System.lineSeparator();
       StringBuilder sb = new StringBuilder(512);
-      sb.append(';'+NAME+" - Primary Configuration File\n");
-      sb.append("\n;Note all time intervals are specified in milliseconds.");
-      sb.append("\n\n;Used to determine compatibility\n");
+      sb.append(';'+NAME+" - Primary Configuration File").append(sep).append(sep);
+      sb.append(";Note all time intervals are specified in milliseconds.");
+      sb.append(sep).append(sep).append(";Used to determine compatibility").append(sep);
       sb.append("Version=").append(VERSION);
-      sb.append("\n\n;Specifies where the database binds to listen for connections\n");
+      sb.append(sep).append(sep).append(";Specifies where the database binds to listen for connections").append(sep);
       sb.append("Port=").append(port);
-      sb.append("\n\n;This key hash authenticates the database\n");
+      sb.append(sep).append(sep).append(";This key hash authenticates the database").append(sep);
       sb.append(";PublicKeyHash=").append(Keys.getPreferredKey().getHashString());
-      sb.append("\n\n;This secret key authenticates clients\n");
+      sb.append(sep).append(sep).append(";This secret key authenticates clients").append(sep);
       sb.append("ConnectionKey=").append(Long.toHexString(connectionKey));
-      sb.append("\n\n;The maximum waitlist size for client connection processing\n");
+      sb.append(sep).append(sep).append(";The maximum waitlist size for client connection processing").append(sep);
       sb.append("BackLog=").append(backlog);
-      sb.append("\n\n;Specifies how long to wait for a client response before assuming the connection has been lost\n");
+      sb.append(sep).append(sep).append(";Specifies how long to wait for a client response before assuming the connection has been lost").append(sep);
       sb.append("Timeout=").append(timeout);
-      sb.append("\n\n;Specifies how long to keep log entries before erasing them\n");
+      sb.append(sep).append(sep).append(";Specifies how long to keep log entries before erasing them").append(sep);
       sb.append("DeleteLogAfter=").append(deleteLogAfter);
       ByteBuffer buf = ByteBuffer.wrap(sb.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));
       synchronized(Config.class){
